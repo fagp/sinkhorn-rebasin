@@ -1,0 +1,3 @@
+recursive-include rebasin
+global-exclude *.pyc, *.png, *.tif, *.t7
+global-include *.sh
