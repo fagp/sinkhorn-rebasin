@@ -1,11 +1,7 @@
 import torch
 from copy import deepcopy
 from .sinkhorn import Sinkhorn, matching
-import warnings
-from .graph import permutation_graph
-
-warnings.filterwarnings("ignore")
-
+from .graph.auto_graph import solve_graph
 
 class ReparamNet(torch.nn.Module):
     def __init__(self, model):
@@ -36,11 +32,11 @@ class ReparamNet(torch.nn.Module):
                 or name not in self.map_prev_param_index
             ):
                 continue
-            i = self.map_param_index[name]
-            j = self.map_prev_param_index[name]
+            i = self.perm_dict[self.map_param_index[name]]
+            j = self.perm_dict[self.map_prev_param_index[name]] if self.map_prev_param_index[name] is not None else None
 
             if "bias" in name:
-                if i is not None:
+                if i is not None :
                     p1.copy_(P[i] @ p2)
                 else:
                     continue
@@ -80,20 +76,17 @@ class ReparamNet(torch.nn.Module):
         self.model.to(device)
 
         return self
-
-
+    
 class RebasinNet(torch.nn.Module):
     def __init__(
         self,
         model,
-        P_sizes=None,
+        input_shape,
+        remove_nodes = list(),
         l=1.0,
         tau=1.0,
         n_iter=20,
         operator="implicit",
-        input=None,
-        mark_as_leaf=list(),
-        remove_nodes=list(),
     ):
         super().__init__()
         assert operator in [
@@ -101,38 +94,34 @@ class RebasinNet(torch.nn.Module):
         ], "Operator must be either `implicit`"
 
         self.reparamnet = ReparamNet(model)
-
-        if P_sizes is None:
-            permutation_g, parameter_map = permutation_graph(
-                model, input, False, mark_as_leaf, remove_nodes
-            )
-            # permutation_g.view()
-            P_sizes = [None] * len(permutation_g.not_output_nodes())
-            map_param_index = dict()
-            map_prev_param_index = dict()
-            nodes = list(permutation_g.nodes.keys())
-            for name, p in model.named_parameters():
-                if parameter_map[name] not in nodes:
-                    continue
-                if permutation_g.nodes[parameter_map[name]]["is_output"]:
-                    map_param_index[name] = None
-                else:
-                    map_param_index[name] = permutation_g.naming[parameter_map[name]]
-                parents = permutation_g.parents(parameter_map[name])
-                map_prev_param_index[name] = (
-                    None if len(parents) == 0 else permutation_g.naming[parents[0]]
+        input = torch.randn(input_shape)
+        perm_dict,n_perm,permutation_g,parameter_map = solve_graph(model,input,remove_nodes=remove_nodes)
+        
+        P_sizes = [None] * n_perm
+        map_param_index = dict()
+        map_prev_param_index = dict()
+        nodes = list(permutation_g.nodes.keys())
+        for name, p in model.named_parameters():
+            if parameter_map[name] not in nodes:
+                continue
+            else:
+                map_param_index[name] = permutation_g.naming[parameter_map[name]]
+            parents = permutation_g.parents(parameter_map[name])
+            map_prev_param_index[name] = (
+                None if len(parents) == 0 else permutation_g.naming[parents[0]]
                 )
 
-                if "weight" in name:
-                    if len(p.shape) == 1:  # batchnorm
-                        pass  # no permutation : bn is "part" for the previous one like biais
-                    else:
-                        perm_index = map_param_index[name]
-                        if perm_index is not None:
-                            P_sizes[perm_index] = (p.shape[0], p.shape[0])
+            if "weight" in name:
+                if len(p.shape) == 1:  # batchnorm
+                    pass  # no permutation : bn is "part" for the previous one like biais
+                else:
+                    if map_param_index[name] is not None and perm_dict[map_param_index[name]] is not None:
+                        perm_index = perm_dict[map_param_index[name]]
+                        P_sizes[perm_index] = (p.shape[0], p.shape[0])
 
         self.reparamnet.map_param_index = map_param_index
         self.reparamnet.map_prev_param_index = map_prev_param_index
+        self.reparamnet.perm_dict = perm_dict
 
         self.p = torch.nn.ParameterList(
             [

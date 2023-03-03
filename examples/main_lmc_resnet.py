@@ -11,7 +11,7 @@ from time import time
 import torchvision.transforms as tr
 import os
 
-LOAD_TRAINED_MODEL = True
+LOAD_TRAINED_MODEL = False
 if not os.path.exists("./data/imagenette2-320"):
     print(
         "Please download the imagenet subset first using the script download_imagenet_subset.sh"
@@ -116,9 +116,7 @@ print("Model B: test loss {:1.3f}, test accuracy {:1.3f}".format(loss, acc))
 # rebasin network for model A
 pi_modelA = RebasinNet(
     modelA,
-    input=torch.zeros((1, 3, 224, 224)).to(device),
-    mark_as_leaf=[2, 4, 6, 9, 11, 14, 16, 19],
-    remove_nodes=[0, 7, 12, 17],
+    input_shape=(1, 3, 224, 224),
 )
 pi_modelA.to(device)
 

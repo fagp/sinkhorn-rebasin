@@ -17,7 +17,7 @@ modelA = VGG("VGG19", in_channels=3, out_features=10, h_in=32, w_in=32)
 modelA.to(device)
 
 # rebasin network for model A
-pi_modelA = RebasinNet(modelA, input=torch.zeros((1, 3, 32, 32)).to(device))
+pi_modelA = RebasinNet(modelA, input_shape=(1, 3, 32, 32))
 pi_modelA.to(device)
 
 # we will create a random permuation of A
@@ -32,7 +32,7 @@ target = pi_modelA.p[0].data.clone().cpu().numpy().astype("uint8")
 
 # we set the permutation matrices to be the identity again
 del pi_modelA
-pi_modelA = RebasinNet(modelA, input=torch.zeros((1, 3, 32, 32)).to(device))
+pi_modelA = RebasinNet(modelA, input_shape=(1, 3, 32, 32))
 pi_modelA.to(device)
 pi_modelA.identity_init()
 pi_modelA.train()

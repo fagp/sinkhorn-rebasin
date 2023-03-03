@@ -19,9 +19,7 @@ modelA = ResNet(ResidualBlock, [2, 2, 2, 2], num_classes=10)
 # rebasin network for model A
 pi_modelA = RebasinNet(
     modelA,
-    input=torch.zeros((1, 3, 224, 224)),
-    mark_as_leaf=[2, 4, 6, 9, 11, 14, 16, 19],
-    remove_nodes=[0, 7, 12, 17],
+    input_shape=(1, 3, 224, 224),
 )
 
 # we will create a random permuation of A
@@ -37,9 +35,7 @@ target = pi_modelA.p[0].data.clone().numpy().astype("uint8")
 del pi_modelA
 pi_modelA = RebasinNet(
     modelA,
-    input=torch.zeros((1, 3, 224, 224)),
-    mark_as_leaf=[2, 4, 6, 9, 11, 14, 16, 19],
-    remove_nodes=[0, 7, 12, 17],
+    input_shape=(1, 3, 224, 224),
 )
 pi_modelA.identity_init()
 pi_modelA.train()
@@ -50,7 +46,7 @@ print("\n")
 criterion = DistL1Loss(modelB)
 
 # optimizer for rebasin network
-optimizer = torch.optim.AdamW(pi_modelA.p.parameters(), lr=0.1)
+optimizer = torch.optim.AdamW(pi_modelA.p.parameters(), lr=10.)
 
 # try to find the permutation matrices that originated modelB
 print("\nTraining Re-Basing network")

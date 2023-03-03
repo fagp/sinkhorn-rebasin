@@ -13,7 +13,7 @@ from time import time
 modelA = MLP(num_hidden=2)
 
 # rebasin network for model A
-pi_modelA = RebasinNet(modelA, input=torch.zeros((1, 1)))
+pi_modelA = RebasinNet(modelA, input_shape=(1, 1))
 
 # we will create a random permuation of A
 # this will be model B
@@ -26,7 +26,7 @@ target = pi_modelA.p[0].data.clone().numpy().astype("uint8")
 
 # we set the permutation matrices to be the identity again
 del pi_modelA
-pi_modelA = RebasinNet(modelA, input=torch.zeros((1, 1)))
+pi_modelA = RebasinNet(modelA, input_shape=(1, 1))
 pi_modelA.identity_init()
 pi_modelA.train()
 print("\nMaking sure we initialize the permutation matrices to I")

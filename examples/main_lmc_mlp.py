@@ -63,7 +63,7 @@ print("Model B: test loss {:1.3f}, test accuracy {:1.3f}".format(loss, acc))
 
 
 # rebasin network for model A
-pi_modelA = RebasinNet(modelA, input=torch.zeros(1, 28 * 28).to(device))
+pi_modelA = RebasinNet(modelA, input_shape=(1, 28 * 28))
 pi_modelA.to(device)
 
 # mid point loss
