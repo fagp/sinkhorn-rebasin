@@ -8,45 +8,46 @@ from copy import deepcopy
 from time import time
 
 # this code is similar to experiment 1 of our paper
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+if device == torch.device("cpu"):
+    print("Consider using GPU, if available, for a significant speed up.")
 
 # model A randomly initialized
 modelA = ResNet(ResidualBlock, [2, 2, 2, 2], num_classes=10)
+modelA.to(device)
 
 # if you have a model trained and saved, you can load it here by uncommenting the following lines
 # sd = torch.load("model.pt")
 # modelA.load_state_dict(sd["weights"])
 
 # rebasin network for model A
-pi_modelA = RebasinNet(
-    modelA,
-    input_shape=(1, 3, 224, 224),
-)
+pi_modelA = RebasinNet(modelA, input_shape=(1, 3, 224, 224))
+pi_modelA.to(device)
 
 # we will create a random permuation of A
 # this will be model B
 pi_modelA.random_init()
 pi_modelA.eval()
 modelB = deepcopy(pi_modelA())
+modelB.to(device)
 
 # storing the permutation matrix P0 for comparison purposes
-target = pi_modelA.p[0].data.clone().numpy().astype("uint8")
+target = pi_modelA.p[0].data.clone().cpu().numpy().astype("uint8")
 
 # we set the permutation matrices to be the identity again
 del pi_modelA
-pi_modelA = RebasinNet(
-    modelA,
-    input_shape=(1, 3, 224, 224),
-)
+pi_modelA = RebasinNet(modelA, input_shape=(1, 3, 224, 224))
+pi_modelA.to(device)
 pi_modelA.identity_init()
 pi_modelA.train()
 print("\nMaking sure we initialize the permutation matrices to I")
-print(pi_modelA.p[0].data.clone().numpy().astype("uint8"))
+print(pi_modelA.p[0].data.clone().cpu().numpy().astype("uint8"))
 print("\n")
 # distance loss
 criterion = DistL1Loss(modelB)
 
 # optimizer for rebasin network
-optimizer = torch.optim.AdamW(pi_modelA.p.parameters(), lr=10.)
+optimizer = torch.optim.AdamW(pi_modelA.p.parameters(), lr=10.0)
 
 # try to find the permutation matrices that originated modelB
 print("\nTraining Re-Basing network")
@@ -77,14 +78,23 @@ print("Elapsed time {:1.3f} secs".format(time() - t1))
 
 # if loss validation is 0, then we found the same permutation matrix
 pi_modelA.eval()
-estimated = matching(pi_modelA.p[0].data.clone()).numpy().astype("uint8")
+estimated = matching(pi_modelA.p[0].data.clone().cpu()).numpy().astype("uint8")
 
-print()
-print("Target permutation matrix P0:")
+print("\nTarget permutation matrix P0:")
 print(target)
+target = visualize_kernels(torch.from_numpy(target).float())
+plt.imshow(target)
+plt.axis("off")
+# plt.show()
+plt.savefig("alignment_resnet_permutation_target.png")
 
 print("\nEstimated permutation matrix P0:")
 print(estimated)
+estimated = visualize_kernels(torch.from_numpy(estimated).float())
+plt.imshow(estimated)
+plt.axis("off")
+# plt.show()
+plt.savefig("alignment_resnet_permutation_estimated.png")
 
 if loss_validation == 0:
     print("\nTransportation plan found for ResNet!")

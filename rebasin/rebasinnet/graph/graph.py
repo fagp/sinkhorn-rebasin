@@ -82,9 +82,16 @@ class graph:
         return parents
 
     def closer_perm(self, key):
-        if self.nodes[key]["type"] in ["ConvolutionBackward0", "AddmmBackward0"]:
+        if self.nodes[key]["type"] in [
+            "ConvolutionBackward0",
+            "AddmmBackward0",
+            "MmBackward0",
+        ]:
             return key
-        if self.nodes[key]["type"] == "NativeBatchNormBackward0":
+        if self.nodes[key]["type"] in [
+            "NativeBatchNormBackward0",
+            "NativeGroupNormBackward0",
+        ]:
             return key
 
         child = self.edges[key]
@@ -108,11 +115,15 @@ class graph:
             if (
                 node in perms
                 and notfirst
-                and type_node in ["ConvolutionBackward0", "AddmmBackward0"]
+                and type_node
+                in ["ConvolutionBackward0", "AddmmBackward0", "MmBackward0"]
             ):
                 childs.append(node)
             else:
-                if type_node == "NativeBatchNormBackward0":
+                if type_node in [
+                    "NativeBatchNormBackward0",
+                    "NativeGroupNormBackward0",
+                ]:
                     fused_nodes.append(node)
                 for child in self.edges[node]:
                     if child not in visited:
@@ -172,7 +183,10 @@ def permutation_graph(
     for p in permutation_list:
         if p in visited:
             continue
-        if g.nodes[p]["type"] == "NativeBatchNormBackward0":
+        if g.nodes[p]["type"] in [
+            "NativeBatchNormBackward0",
+            "NativeGroupNormBackward0",
+        ]:
             continue
 
         permutation_graph.add_node(

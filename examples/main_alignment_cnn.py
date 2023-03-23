@@ -77,12 +77,21 @@ print("Elapsed time {:1.3f} secs".format(time() - t1))
 pi_modelA.eval()
 estimated = matching(pi_modelA.p[0].data.clone().cpu()).numpy().astype("uint8")
 
-print()
-print("Target permutation matrix P0:")
+print("\nTarget permutation matrix P0:")
 print(target)
+target = visualize_kernels(torch.from_numpy(target).float())
+plt.imshow(target)
+plt.axis("off")
+# plt.show()
+plt.savefig("alignment_cnn_permutation_target.png")
 
 print("\nEstimated permutation matrix P0:")
 print(estimated)
+estimated = visualize_kernels(torch.from_numpy(estimated).float())
+plt.imshow(estimated)
+plt.axis("off")
+# plt.show()
+plt.savefig("alignment_cnn_permutation_estimated.png")
 
 if loss_validation == 0:
     print("\nTransportation plan found for VGG!")

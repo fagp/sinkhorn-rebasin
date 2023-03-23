@@ -1,3 +1,4 @@
+import torch
 from copy import deepcopy
 
 
@@ -7,6 +8,23 @@ def lerp(model1, model2, l):
         temporal_model.parameters(), model1.parameters(), model2.parameters()
     ):
         p.data.copy_((1 - l) * p1.data + l * p2.data)
+
+    for m, m1, m2 in zip(temporal_model.modules(), model1.modules(), model2.modules()):
+        if isinstance(m, torch.nn.BatchNorm2d):
+            m.running_mean = None
+            m.running_var = None
+            m.track_running_stats = False
+            # REPAIR
+            # m.bias.data.copy_((1 - l) * m1.running_mean.data + l * m2.running_mean.data)
+            # m.weight.data.copy_(
+            #     (1 - l) * m1.running_var.sqrt() + l * m2.running_var.sqrt()
+            # )
+            # m.running_mean.data.copy_(
+            #     (1 - l) * m1.running_mean.data + l * m2.running_mean.data
+            # )
+            # m.running_var.data.copy_(
+            #     (1 - l) * m1.running_var.data + l * m2.running_var.data
+            # )
 
     return temporal_model
 
@@ -33,8 +51,9 @@ def eval_loss_acc(model, dataset, criterion, device):
     cumulative_test_acc = 0
     total_test = 0
     model.eval()
+    param_precision = next(iter(model.parameters())).data.dtype
     for x, y in dataset:
-        z, loss = estep(x, y, model, criterion, device)
+        z, loss = estep(x, y, model, criterion, device, param_precision)
         acc_test = sum([1 if y[i] == z[i] else 0 for i in range(y.shape[0])])
 
         cumulative_test_loss += loss * x.shape[0]
@@ -46,7 +65,7 @@ def eval_loss_acc(model, dataset, criterion, device):
     return cumulative_test_loss, cumulative_test_acc
 
 
-def estep(x, y, model, criterion, device):
-    z = model(x.to(device))
+def estep(x, y, model, criterion, device, param_precision):
+    z = model(x.to(device).to(param_precision))
     loss_test = criterion(z, y.to(device))
     return z.detach().argmax(1), loss_test.detach().item()
