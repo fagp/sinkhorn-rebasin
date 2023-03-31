@@ -30,8 +30,8 @@ def get_perm_dict(permutation_g):
                 i = max(perm_dict.values()) + 1
             perm_dict[p_] = j
     # add last node (output) with no perm
-    perm_dict[node] = 0
-    return {n_id: p_id - 1 if p_id > 0 0 else None for n_id, p_id in perm_dict.items()}
+    perm_dict[node] = None
+    return perm_dict
 
 
 def remove_nodes_from_perm_dict(nodes_id, perm_dict):
