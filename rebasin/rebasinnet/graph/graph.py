@@ -71,7 +71,8 @@ class graph:
 
     def paramid(self, name):
         for key, node in self.nodes.items():
-            if node["is_param"] and name in node["type"]:
+            name_from_type = node["type"].split("\n")[0][1:]
+            if node["is_param"] and name == name_from_type:
                 return key
 
     def parents(self, name):
