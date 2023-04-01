@@ -13,19 +13,41 @@ def get_perm_dict(permutation_g):
     get the permutation dict
     """
     perm_dict = {}
-    i = -1
+    i = 0
     for node in permutation_g.naming.values():
         p = get_connected_from(node,permutation_g)
         j = i
         i += 1
-        for p_ in p:
-            if p_ in perm_dict.keys():
-                j = perm_dict[p_]
-                i = max(perm_dict.values()) + 1
-            perm_dict[p_] = j
-    # add last node (output) with no perm 
-    perm_dict[node] = 0
-    return {n_id:p_id-1 if p_id > 0 else None for n_id,p_id in perm_dict.items()}
+        if permutation_g.nodes[permutation_g.index2name(node)]["type"] == "MulBackward0":
+            # if elementw mult : no perm & disable prev perm
+            # in theory we can handle that case (not yet for us)
+            perm_dict[node] = None
+            for p_ in p :
+                perm_dict[p_] = None
+        elif permutation_g.nodes[permutation_g.index2name(node)]["type"] == "CatBackward0":
+            # if concatenation : no perm but list of perm_id to use
+            # sort list to match concat order
+#             perm_dict[node] = sorted(p, key=lambda p_id: int(permutation_g.index2name(p_id)),
+#                                     )#reverse=True)
+            perm_dict[node] = p 
+    
+            for p_ in p:
+                i = max([p_id for p_id in perm_dict.values() if isinstance(p_id,int)]) + 1
+                perm_dict[p_] = i
+        else :
+            for p_ in p:
+                if p_ in perm_dict.keys():
+                    # p_id already in perm_dict
+                    j = perm_dict[p_] # old p_id
+                    i = max([p_id for p_id in perm_dict.values() if isinstance(p_id,int)]) + 1 # next new p_id
+                perm_dict[p_] = j
+                
+    # add last output nodes with no perm
+    output_nodes = [k for k,v in permutation_g.nodes.items() if v["is_output"]]
+    for node in output_nodes:
+        name = permutation_g.naming[node]
+        perm_dict[name] = None
+    return perm_dict
 
 def remove_nodes_from_perm_dict(nodes_id,perm_dict):
     """
@@ -45,7 +67,8 @@ def re_id_perm(perm_dict):
     """
     fill in the gaps in the perm_ids
     """
-    list_perm_id = unique([p_id for p_id in perm_dict.values() if p_id is not None])
+    list_perm_id = unique([p_id for p_id in perm_dict.values() if isinstance(p_id,int)])
+    assert  (list_perm_id>=0).all(),"Negative p_id"
     if len(list_perm_id) == 0:
         # no permutation left
         return perm_dict
@@ -54,22 +77,31 @@ def re_id_perm(perm_dict):
         # no re_id needed 
         return perm_dict
     for n_id,p_id in perm_dict.items():
-        if p_id is not None and p_id > first_gap :
+        if p_id is None:
+            continue
+        if isinstance(p_id,int) and p_id > first_gap :
             # fill the gap
-            perm_dict[n_id] = p_id-1
+            perm_dict[n_id] -= 1
     # if there is more that one gap :
     return re_id_perm(perm_dict)
 
 def solve_graph(model,input,remove_nodes=list()):
-    permutation_g, parameter_map = permutation_graph(
-                model, input, False, [], []
-            )
+    permutation_g, parameter_map = permutation_graph(model, input)
     perm_dict = get_perm_dict(permutation_g)
     # remove the nodes disabled by the user
     perm_dict = remove_nodes_from_perm_dict(remove_nodes,perm_dict)
     # fill the gaps
     perm_dict = re_id_perm(perm_dict)
-    n_perm = len(unique([p_id for p_id in perm_dict.values() if p_id is not None]))
+    # remove perm in concat where there is at least one None
+    # in theory we can handle that case (not yet for us)
+    for k,p_id in perm_dict.items():
+        if isinstance(p_id,list):
+            if None in [perm_dict[x] for x in p_id]:
+                perm_dict[k] = None
+                perm_dict = remove_nodes_from_perm_dict(p_id,perm_dict)
+    # fill the gaps
+    perm_dict = re_id_perm(perm_dict)
+    n_perm = len(unique([p_id for p_id in perm_dict.values() if isinstance(p_id,int)]))
     if n_perm == 0:
         warnings.warn("No permutation left in graph, you might let more nodes free")
     return perm_dict,n_perm,permutation_g,parameter_map

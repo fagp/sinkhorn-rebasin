@@ -3,6 +3,16 @@ from copy import deepcopy
 from .sinkhorn import Sinkhorn, matching
 from .graph.auto_graph import solve_graph
 
+def get_perm_concat_matrix(list_perm):
+    dim = sum([x.shape[0] for x in list_perm])
+    perm_matrix = torch.zeros(dim,dim)
+    i = 0
+    for p in list_perm :
+        d = p.shape[0]
+        perm_matrix[i:i+d,i:i+d] = p
+        i += d
+    return perm_matrix
+
 class ReparamNet(torch.nn.Module):
     def __init__(self, model):
         super().__init__()
@@ -33,7 +43,21 @@ class ReparamNet(torch.nn.Module):
             ):
                 continue
             i = self.perm_dict[self.map_param_index[name]]
-            j = self.perm_dict[self.map_prev_param_index[name]] if self.map_prev_param_index[name] is not None else None
+            j = self.map_prev_param_index[name]
+            
+            if j is not None:
+                # if we have a prev prem
+                j = self.perm_dict[j]
+                # get the convert the node id to perm_id
+                if j is not None and isinstance(j,int):
+                    # previous node have a real perm
+                    Pj = P[j]
+                if j is not None and isinstance(j,list):
+                    # prev layer is a concatenation
+                    list_perm = []
+                    for p_id in j:
+                        list_perm.append(P[self.perm_dict[p_id]])
+                    Pj = get_perm_concat_matrix(list_perm)
 
             if "bias" in name:
                 if i is not None :
@@ -54,9 +78,9 @@ class ReparamNet(torch.nn.Module):
                 if i is not None and j is not None:
                     p1.copy_(
                         (
-                            P[j].view(1, *P[j].shape)
+                            Pj.view(1, *Pj.shape)
                             @ (P[i] @ p2.view(P[i].shape[0], -1)).view(
-                                p2.shape[0], P[j].shape[0], -1
+                                p2.shape[0], Pj.shape[0], -1
                             )
                         ).view(p2.shape)
                     )
@@ -64,8 +88,8 @@ class ReparamNet(torch.nn.Module):
                 if i is None and j is not None:
                     p1.copy_(
                         (
-                            P[j].view(1, *P[j].shape)
-                            @ p2.view(p2.shape[0], P[j].shape[0], -1)
+                            Pj.view(1, *Pj.shape)
+                            @ p2.view(p2.shape[0], Pj.shape[0], -1)
                         ).view(p2.shape)
                     )
 
@@ -94,7 +118,10 @@ class RebasinNet(torch.nn.Module):
         ], "Operator must be either `implicit`"
 
         self.reparamnet = ReparamNet(model)
-        input = torch.randn(input_shape)
+        if isinstance(input_shape,list):
+            input = [torch.randn(shape) for shape in input_shape]
+        else:
+            input = torch.randn(input_shape)
         perm_dict,n_perm,permutation_g,parameter_map = solve_graph(model,input,remove_nodes=remove_nodes)
         
         P_sizes = [None] * n_perm
@@ -102,7 +129,9 @@ class RebasinNet(torch.nn.Module):
         map_prev_param_index = dict()
         nodes = list(permutation_g.nodes.keys())
         for name, p in model.named_parameters():
-            if parameter_map[name] not in nodes:
+            if name not in parameter_map.keys() or parameter_map[name] not in nodes :
+                continue
+            elif permutation_g.naming[parameter_map[name]] not in perm_dict.keys():
                 continue
             else:
                 map_param_index[name] = permutation_g.naming[parameter_map[name]]
@@ -115,7 +144,8 @@ class RebasinNet(torch.nn.Module):
                 if len(p.shape) == 1:  # batchnorm
                     pass  # no permutation : bn is "part" for the previous one like biais
                 else:
-                    if map_param_index[name] is not None and perm_dict[map_param_index[name]] is not None:
+                    if map_param_index[name] is not None \
+                        and perm_dict[map_param_index[name]] is not None:
                         perm_index = perm_dict[map_param_index[name]]
                         P_sizes[perm_index] = (p.shape[0], p.shape[0])
 

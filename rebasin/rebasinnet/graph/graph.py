@@ -2,6 +2,17 @@ from collections import defaultdict
 from torchviz import make_dot
 import graphviz
 
+import warnings
+
+list_node_without_perm = ["CatBackward0","MulBackward0"]
+# these particular cases must be treated individually in the auto_graph.py
+# list of perv nodes will be used for thoses cases
+list_node_perm = ["ConvolutionBackward0", "AddmmBackward0","MmBackward0"]
+# int perm_id
+list_node = list_node_perm + list_node_without_perm
+# layers where we want to set a node to
+list_node_fuse = ["NativeBatchNormBackward0","NativeGroupNormBackward0"]
+# layers where we need to use the prev perm 
 
 class graph:
     def __init__(self):
@@ -9,37 +20,10 @@ class graph:
         self.edges = defaultdict(list)
         self.naming = dict()
 
-    def view(self):
-        node_attr = dict(
-            style="filled",
-            shape="box",
-            align="left",
-            fontsize="10",
-            ranksep="0.1",
-            height="0.2",
-            fontname="monospace",
-        )
-        dot = graphviz.Digraph(
-            "param_list",
-            format="pdf",
-            node_attr=node_attr,
-            graph_attr=dict(size="12,12"),
-        )
-
-        names = self.naming
-        if hasattr(self, "org_naming"):
-            names = self.org_naming
-
-        for key in self.nodes.keys():
-            dot.node(key, str(names[key]))
-
-        for key, childs in self.edges.items():
-            for c in childs:
-                dot.edge(key, c)
-
-        dot.render(directory="doctest-output", view=True, engine="dot")
-
     def add_node(self, name, value, is_output=False, is_param=False):
+        if name in self.nodes.keys():
+            #already in graph
+            warnings.warn("Node {} already in graph".format(name))
         self.nodes[name] = dict(type=value, is_output=is_output, is_param=is_param)
         self.naming[name] = int(len(self.naming))
 
@@ -49,29 +33,14 @@ class graph:
                 return key
         return None
 
-    def mark_as_leaf(self, name):
-        self.nodes[name]["is_output"] = True
-        childs = self.edges[name]
-        self.edges[name] = []
-        parent = self.parents(self.parents(name)[0])[0]
-        for child in childs:
-            self.add_edge(parent, child)
-
     def add_edge(self, from_node, to_node):
         if to_node not in self.edges[from_node]:
             self.edges[from_node].append(to_node)
 
-    def remove_node(self, name):
-        self.nodes.pop(name)
-        self.naming.pop(name)
-        self.edges.pop(name)
-        for key, value in self.edges.items():
-            if name in value:
-                value.remove(name)
-
     def paramid(self, name):
         for key, node in self.nodes.items():
-            if node["is_param"] and name in node["type"]:
+            name_from_type = node["type"].split("\n")[0][1:]
+            if node["is_param"] and name == name_from_type:
                 return key
 
     def parents(self, name):
@@ -82,17 +51,14 @@ class graph:
         return parents
 
     def closer_perm(self, key):
-        if self.nodes[key]["type"] in ["ConvolutionBackward0", "AddmmBackward0"]:
+        if self.nodes[key]["type"] in list_node:
             return key
-        if self.nodes[key]["type"] == "NativeBatchNormBackward0":
+        if self.nodes[key]["type"] in list_node_fuse:
             return key
 
         child = self.edges[key]
         assert len(child) == 1
         return self.closer_perm(child[0])
-
-    def not_output_nodes(self):
-        return [key for key, value in self.nodes.items() if not value["is_output"]]
 
     def child_perm(self, key, perms):
         queue = [key]
@@ -108,11 +74,11 @@ class graph:
             if (
                 node in perms
                 and notfirst
-                and type_node in ["ConvolutionBackward0", "AddmmBackward0"]
+                and type_node in list_node
             ):
                 childs.append(node)
             else:
-                if type_node == "NativeBatchNormBackward0":
+                if type_node in list_node_fuse:
                     fused_nodes.append(node)
                 for child in self.edges[node]:
                     if child not in visited:
@@ -146,25 +112,46 @@ class graph:
                 self.add_edge(from_node, to_node)
 
 
-def permutation_graph(
-    model, input, fix_multiple=False, mark_as_leaf=list(), remove_nodes=list()
-):
+def permutation_graph(model, input):
     prev_dev = next(model.parameters()).device
     model.to("cpu")
-    input = input.to("cpu")
-    y = model(input)
+    if isinstance(input,list):
+        input = [x.to("cpu") for x in input]
+        y = model(*input)
+    else:
+        input = input.to("cpu")
+        y = model(input)
     dot = make_dot(y, params=dict(model.named_parameters()))
-    # dot.view()
     g = graph()
     g.from_dot(dot)
-
     # map param name to permutation
     permutation_param = dict()
     for name, param in model.named_parameters():
         key = g.paramid(name)
-        permutation_param[name] = g.closer_perm(key)
+        if key is not None :
+            permutation_param[name] = g.closer_perm(key)
 
-    permutation_list = list(permutation_param.values())
+    # add concat node
+    list_concat_node = []
+    for key,v in g.nodes.items():
+        if v["type"] in list_node_without_perm :
+            list_concat_node.append(key)
+
+    # set is_output
+    for k in [k for k,v in g.nodes.items() if v["is_output"]]:
+        p = g.parents(k)
+        if len(p) == 0 :
+            # input is an output
+            continue
+        assert len(p) == 1 ," more than on parent node to the output shape {}".format(g.nodes[k]["type"])
+        g.nodes[p[0]]["is_output"] = True
+        if g.nodes[p[0]]["type"] in list_node_fuse:
+            for k in [k for k in g.parents(p[0]) if g.nodes[k]["type"] in list_node]:
+                g.nodes[k]["is_output"] = True
+
+    permutation_list = list(permutation_param.values()) + list_concat_node
+    
+    permutation_graph = graph()
     visited = set()
 
     # construct permutation params graph
@@ -172,7 +159,7 @@ def permutation_graph(
     for p in permutation_list:
         if p in visited:
             continue
-        if g.nodes[p]["type"] == "NativeBatchNormBackward0":
+        if g.nodes[p]["type"] in list_node_fuse:
             continue
 
         permutation_graph.add_node(
@@ -189,47 +176,5 @@ def permutation_graph(
             permutation_graph.add_edge(p, c)
 
         visited.add(p)
-
-    copy_naming = permutation_graph.naming.copy()
-    permutation_graph.org_naming = copy_naming
-    # find leaf permutations nodes
-    for k, v in permutation_graph.naming.items():
-        c, _ = permutation_graph.child_perm(k, permutation_list)
-        if not c:
-            permutation_graph.nodes[k]["is_output"] = True
-
-    for k in mark_as_leaf:
-        permutation_graph.mark_as_leaf(permutation_graph.index2name(k))
-
-    for k in remove_nodes:
-        permutation_graph.remove_node(permutation_graph.index2name(k))
-
-    max_index = max(list(permutation_graph.naming.values())) + 1
-    for k, v in permutation_graph.nodes.items():
-        if v["is_output"]:
-            permutation_graph.naming[k] = max_index
-            max_index += 1
-
-    remap_index = {
-        r: v for (v, r) in enumerate(sorted(list(permutation_graph.naming.values())))
-    }
-    for k in permutation_graph.naming.keys():
-        permutation_graph.naming[k] = remap_index[permutation_graph.naming[k]]
-
-    # fix permutation nodes with multiple parents
-    if fix_multiple:
-        for n in list(permutation_graph.nodes.keys()):
-            if n not in permutation_graph.nodes:
-                continue
-            parents = permutation_graph.parents(n)
-            if len(parents) > 1:
-                for p in parents[1:]:
-                    permutation_graph.remove_node(p)
-
-        list_nodes = list(permutation_graph.nodes.keys())
-        for k, v in list(permutation_param.items()):
-            if v not in list_nodes:
-                permutation_param.pop(k)
-
     model.to(prev_dev)
     return permutation_graph, permutation_param
