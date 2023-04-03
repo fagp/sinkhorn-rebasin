@@ -258,14 +258,10 @@ class RebasinNet(torch.nn.Module):
 
     def eval(self):
         self.reparamnet.eval()
-        for p in self.reparamnet.output.parameters():
-            p.requires_grad = True
         return super().eval()
 
     def train(self, mode: bool = True):
         self.reparamnet.train(mode)
-        for p in self.reparamnet.output.parameters():
-            p.requires_grad = False
         return super().train(mode)
 
     def forward(self, x=None):

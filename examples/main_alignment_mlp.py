@@ -8,7 +8,6 @@ from copy import deepcopy
 from time import time
 
 # this code is similar to experiment 1 of our paper
-
 # model A randomly initialized
 modelA = MLP(num_hidden=2)
 

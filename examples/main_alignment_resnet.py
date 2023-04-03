@@ -1,28 +1,25 @@
 import torch
-from models import ResidualBlock, ResNet
 from rebasin.loss import DistL1Loss
 from rebasin import RebasinNet, matching
 from utils import visualize_kernels
 import matplotlib.pyplot as plt
 from copy import deepcopy
 from time import time
+import torchvision
 
 # this code is similar to experiment 1 of our paper
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 if device == torch.device("cpu"):
     print("Consider using GPU, if available, for a significant speed up.")
 
-# model A randomly initialized
-modelA = ResNet(ResidualBlock, [2, 2, 2, 2], num_classes=10)
+# model A pretrained on ImageNet
+modelA = torchvision.models.resnet18(pretrained=True, num_classes=1000)
 modelA.to(device)
-
-# if you have a model trained and saved, you can load it here by uncommenting the following lines
-# sd = torch.load("model.pt")
-# modelA.load_state_dict(sd["weights"])
 
 # rebasin network for model A
 pi_modelA = RebasinNet(modelA, input_shape=(1, 3, 224, 224))
 pi_modelA.to(device)
+
 
 # we will create a random permuation of A
 # this will be model B
@@ -100,19 +97,19 @@ if loss_validation == 0:
     print("\nTransportation plan found for ResNet!")
 
 # visualize the kernels of the first convolutional layer
-kernelsA = visualize_kernels(modelA.layer0[0].conv1[0].weight)
+kernelsA = visualize_kernels(modelA.conv1.weight)
 plt.imshow(kernelsA)
 plt.axis("off")
 # plt.show()
 plt.savefig("alignment_resnet_modelA.png")
 
-kernelsB = visualize_kernels(modelB.layer0[0].conv1[0].weight)
+kernelsB = visualize_kernels(modelB.conv1.weight)
 plt.imshow(kernelsB)
 plt.axis("off")
 # plt.show()
 plt.savefig("alignment_resnet_modelB.png")
 
-kernelspiA = visualize_kernels(pi_modelA().layer0[0].conv1[0].weight)
+kernelspiA = visualize_kernels(pi_modelA().conv1.weight)
 plt.imshow(kernelspiA)
 plt.axis("off")
 # plt.show()

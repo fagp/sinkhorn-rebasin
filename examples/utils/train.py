@@ -4,7 +4,8 @@ from tqdm import tqdm
 def train(model, dataset_train, dataset_val, optimizer, criterion, device, epochs=5):
     model.to(device)
 
-    for epoch in tqdm(range(epochs)):
+    pbar = tqdm(range(epochs))
+    for epoch in pbar:
         cumulative_train_loss = 0
         total_train = 0
         model.train()
@@ -26,6 +27,12 @@ def train(model, dataset_train, dataset_val, optimizer, criterion, device, epoch
         cumulative_val_loss /= total_val
         if cumulative_val_loss == 0:
             break
+
+        pbar.set_postfix_str(
+            "train loss: {:1.4f}, val loss: {:1.4f}".format(
+                cumulative_train_loss, cumulative_val_loss
+            )
+        )
 
     return model
 

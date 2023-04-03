@@ -2,8 +2,9 @@ import torch
 from copy import deepcopy
 
 
-def lerp(model1, model2, l):
-    temporal_model = deepcopy(model1)
+def lerp(model1, model2, l, temporal_model=None):
+    if temporal_model is None:
+        temporal_model = deepcopy(model1)
     for p, p1, p2 in zip(
         temporal_model.parameters(), model1.parameters(), model2.parameters()
     ):
@@ -14,17 +15,6 @@ def lerp(model1, model2, l):
             m.running_mean = None
             m.running_var = None
             m.track_running_stats = False
-            # REPAIR
-            # m.bias.data.copy_((1 - l) * m1.running_mean.data + l * m2.running_mean.data)
-            # m.weight.data.copy_(
-            #     (1 - l) * m1.running_var.sqrt() + l * m2.running_var.sqrt()
-            # )
-            # m.running_mean.data.copy_(
-            #     (1 - l) * m1.running_mean.data + l * m2.running_mean.data
-            # )
-            # m.running_var.data.copy_(
-            #     (1 - l) * m1.running_var.data + l * m2.running_var.data
-            # )
 
     return temporal_model
 
