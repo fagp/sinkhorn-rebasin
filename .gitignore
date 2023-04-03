@@ -1,0 +1,11 @@
+*.JPEG
+*.pyc
+*.gz
+*-ubyte
+*.csv
+*.json
+*.png
+*.pdf
+*.pt
+*.beton
+debug/*
