@@ -1,0 +1,6 @@
+@article{pena2022re,
+  title={Re-basin via implicit Sinkhorn differentiation},
+  author={Pe{\~n}a, Fidel A Guerrero and Medeiros, Heitor Rapela and Dubail, Thomas and Aminbeidokhti, Masih and Granger, Eric and Pedersoli, Marco},
+  journal={arXiv preprint arXiv:2212.12042},
+  year={2022}
+}
