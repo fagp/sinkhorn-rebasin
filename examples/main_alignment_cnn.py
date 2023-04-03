@@ -1,19 +1,20 @@
 import torch
-from models import VGG
 from rebasin.loss import DistL1Loss
 from rebasin import RebasinNet, matching
 from utils import visualize_kernels
 import matplotlib.pyplot as plt
 from copy import deepcopy
 from time import time
+import torchvision
 
 # this code is similar to experiment 1 of our paper
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 if device == torch.device("cpu"):
     print("Consider using GPU, if available, for a significant speed up.")
 
-# model A randomly initialized
-modelA = VGG("VGG19", in_channels=3, out_features=10, h_in=32, w_in=32)
+# model A pretrained on ImageNet
+modelA = torchvision.models.vgg11(pretrained=True)
+modelA.classifier = torch.nn.Linear(512 * 7 * 7, 10)
 modelA.to(device)
 
 # rebasin network for model A
@@ -39,6 +40,7 @@ pi_modelA.train()
 print("\nMaking sure we initialize the permutation matrices to I")
 print(pi_modelA.p[0].data.clone().cpu().numpy().astype("uint8"))
 print("\n")
+
 # distance loss
 criterion = DistL1Loss(modelB)
 criterion.to(device)
@@ -77,12 +79,21 @@ print("Elapsed time {:1.3f} secs".format(time() - t1))
 pi_modelA.eval()
 estimated = matching(pi_modelA.p[0].data.clone().cpu()).numpy().astype("uint8")
 
-print()
-print("Target permutation matrix P0:")
+print("\nTarget permutation matrix P0:")
 print(target)
+target = visualize_kernels(torch.from_numpy(target).float())
+plt.imshow(target)
+plt.axis("off")
+# plt.show()
+plt.savefig("alignment_cnn_permutation_target.png")
 
 print("\nEstimated permutation matrix P0:")
 print(estimated)
+estimated = visualize_kernels(torch.from_numpy(estimated).float())
+plt.imshow(estimated)
+plt.axis("off")
+# plt.show()
+plt.savefig("alignment_cnn_permutation_estimated.png")
 
 if loss_validation == 0:
     print("\nTransportation plan found for VGG!")

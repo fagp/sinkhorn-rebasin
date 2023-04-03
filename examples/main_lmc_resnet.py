@@ -1,5 +1,5 @@
 import torch
-from models import ResidualBlock, ResNet
+
 from rebasin.loss import RndLoss
 from rebasin import RebasinNet
 from copy import deepcopy
@@ -10,6 +10,7 @@ from utils import train, lerp, eval_loss_acc
 from time import time
 import torchvision.transforms as tr
 import os
+import torchvision
 
 LOAD_TRAINED_MODEL = False
 if not os.path.exists("./data/imagenette2-320"):
@@ -25,6 +26,7 @@ if device == torch.device("cpu"):
     print("Consider using GPU, if available, for a significant speed up.")
 
 # preparing dataset
+num_classes = 10
 dataset = SubsetImageNetDataset(
     root="data/imagenette2-320/train",
     transform=tr.Compose(
@@ -33,6 +35,9 @@ dataset = SubsetImageNetDataset(
             tr.CenterCrop(320),
             tr.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
             tr.RandomHorizontalFlip(),
+            tr.RandomRotation(5),
+            tr.RandomVerticalFlip(),
+            tr.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.1),
             tr.Resize(224),
         ]
     ),
@@ -53,18 +58,21 @@ test = SubsetImageNetDataset(
         ]
     ),
 )
+
 dataset_train = torch.utils.data.DataLoader(
-    training, batch_size=128, shuffle=True, num_workers=0
+    training, batch_size=128, shuffle=True, num_workers=2
 )
 dataset_val = torch.utils.data.DataLoader(
-    validation, batch_size=128, shuffle=False, num_workers=0
+    validation, batch_size=100, shuffle=False, num_workers=2
 )
 dataset_test = torch.utils.data.DataLoader(
-    test, batch_size=128, shuffle=False, num_workers=0
+    test, batch_size=128, shuffle=False, num_workers=2
 )
 
 # model A - trained on subset of imagenet
-modelA = ResNet(ResidualBlock, [2, 2, 2, 2], in_channels=3, num_classes=10)
+modelA = torchvision.models.resnet18(pretrained=True)
+modelA.fc = torch.nn.Linear(512, num_classes)
+
 if LOAD_TRAINED_MODEL:
     sd = torch.load("model1.pt")
     modelA.load_state_dict(sd["weights"])
@@ -74,7 +82,7 @@ else:
         modelA,
         dataset_train,
         dataset_val,
-        torch.optim.Adam(modelA.parameters(), lr=0.001),
+        torch.optim.AdamW(modelA.parameters(), lr=0.001),
         torch.nn.CrossEntropyLoss(),
         device,
         20,
@@ -84,13 +92,12 @@ for p in modelA.modules():
         p.track_running_stats = False
         p.running_mean = None
         p.running_var = None
-
-loss, acc = eval_loss_acc(modelA, dataset_train, torch.nn.CrossEntropyLoss(), device)
+loss, acc = eval_loss_acc(modelA, dataset_test, torch.nn.CrossEntropyLoss(), device)
 print("Model A: test loss {:1.3f}, test accuracy {:1.3f}".format(loss, acc))
 
-
 # model B - trained on subset of imagenet
-modelB = ResNet(ResidualBlock, [2, 2, 2, 2], in_channels=3, num_classes=10)
+modelB = torchvision.models.resnet18(pretrained=False)
+modelB.fc = torch.nn.Linear(512, num_classes)
 if LOAD_TRAINED_MODEL:
     sd = torch.load("model2.pt")
     modelB.load_state_dict(sd["weights"])
@@ -100,23 +107,22 @@ else:
         modelB,
         dataset_train,
         dataset_val,
-        torch.optim.Adam(modelB.parameters(), lr=0.001),
+        torch.optim.AdamW(modelB.parameters(), lr=0.001),
         torch.nn.CrossEntropyLoss(),
         device,
-        20,
+        30,
     )
 for p in modelB.modules():
     if isinstance(p, torch.nn.BatchNorm2d):
         p.track_running_stats = False
         p.running_mean = None
         p.running_var = None
-loss, acc = eval_loss_acc(modelB, dataset_train, torch.nn.CrossEntropyLoss(), device)
+loss, acc = eval_loss_acc(modelB, dataset_test, torch.nn.CrossEntropyLoss(), device)
 print("Model B: test loss {:1.3f}, test accuracy {:1.3f}".format(loss, acc))
 
 # rebasin network for model A
 pi_modelA = RebasinNet(
-    modelA,
-    input_shape=(1, 3, 224, 224),
+    modelA, input_shape=(1, 3, 224, 224), permutation_type="broadcast"
 )
 pi_modelA.to(device)
 
@@ -128,7 +134,7 @@ optimizer = torch.optim.AdamW(pi_modelA.p.parameters(), lr=0.1)
 
 print("\nTraining Re-Basing network")
 t1 = time()
-for iteration in range(20):
+for iteration in range(50):
     # training step
     pi_modelA.train()
     cumulative_train_loss = 0
@@ -150,7 +156,7 @@ for iteration in range(20):
     total_val = 0
     # validation step
     pi_modelA.eval()
-    for x, y in dataset_val:
+    for x, y in dataset_train:
         rebased_model = pi_modelA()
         loss_validation = criterion(rebased_model, x.to(device), y.to(device))
 
@@ -169,27 +175,31 @@ for iteration in range(20):
 
 print("Elapsed time {:1.3f} secs".format(time() - t1))
 
+pi_modelA.update_batchnorm(modelA)
 pi_modelA.eval()
 rebased_model = deepcopy(pi_modelA())
+rebased_model.eval()
 
-lambdas = torch.linspace(0, 1, 50)
+lambdas = torch.linspace(0, 1, 20)
 costs_naive = torch.zeros_like(lambdas)
 costs_lmc = torch.zeros_like(lambdas)
 acc_naive = torch.zeros_like(lambdas)
 acc_lmc = torch.zeros_like(lambdas)
 
+temporal_model = deepcopy(modelA)
+
 print("\nComputing interpolation for LMC visualization")
 for i in tqdm(range(lambdas.shape[0])):
     l = lambdas[i]
 
-    temporal_model = lerp(rebased_model, modelB, l)
+    temporal_model = lerp(rebased_model, modelB, l, temporal_model)
     costs_lmc[i], acc_lmc[i] = eval_loss_acc(
         temporal_model, dataset_train, torch.nn.CrossEntropyLoss(), device
     )
 
-    temporal_model = lerp(modelA, modelB, l)
+    temporal_model2 = lerp(modelA, modelB, l, temporal_model)
     costs_naive[i], acc_naive[i] = eval_loss_acc(
-        temporal_model, dataset_train, torch.nn.CrossEntropyLoss(), device
+        temporal_model2, dataset_train, torch.nn.CrossEntropyLoss(), device
     )
 
 plt.figure()
@@ -199,7 +209,7 @@ plt.title("Loss")
 plt.xticks([0, 1], ["ModelA", "ModelB"])
 plt.legend()
 # plt.show()
-plt.savefig("lmc_resnet_loss.png")
+plt.savefig("lmc_resnet_loss.pdf")
 
 plt.figure()
 plt.plot(lambdas, acc_naive, label="Naive")
@@ -208,6 +218,6 @@ plt.title("Accuracy")
 plt.xticks([0, 1], ["ModelA", "ModelB"])
 plt.legend()
 # plt.show()
-plt.savefig("lmc_resnet_accuracy.png")
+plt.savefig("lmc_resnet_accuracy.pdf")
 
 print("LMC for ResNet!")

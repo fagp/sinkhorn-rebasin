@@ -8,7 +8,6 @@ from copy import deepcopy
 from time import time
 
 # this code is similar to experiment 1 of our paper
-
 # model A randomly initialized
 modelA = MLP(num_hidden=2)
 
@@ -71,9 +70,19 @@ estimated = matching(pi_modelA.p[0].data.clone()).numpy().astype("uint8")
 print()
 print("Target permutation matrix P0:")
 print(target)
+target = visualize_kernels(torch.from_numpy(target).float())
+plt.imshow(target)
+plt.axis("off")
+# plt.show()
+plt.savefig("alignment_mlp_permutation_target.png")
 
 print("\nEstimated permutation matrix P0:")
 print(estimated)
+estimated = visualize_kernels(torch.from_numpy(estimated).float())
+plt.imshow(estimated)
+plt.axis("off")
+# plt.show()
+plt.savefig("alignment_mlp_permutation_estimated.png")
 
 if loss_validation == 0:
     print("\nTransportation plan found for MLP!")

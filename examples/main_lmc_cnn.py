@@ -46,7 +46,7 @@ modelA = train(
 )
 loss, acc = eval_loss_acc(modelA, dataset_test, torch.nn.CrossEntropyLoss(), device)
 print("Model A: test loss {:1.3f}, test accuracy {:1.3f}".format(loss, acc))
-
+modelA.eval()
 
 # model B - trained on Mnist
 modelB = VGG("Small", in_channels=1, out_features=10, h_in=28, w_in=28)
@@ -62,7 +62,7 @@ modelB = train(
 )
 loss, acc = eval_loss_acc(modelB, dataset_test, torch.nn.CrossEntropyLoss(), device)
 print("Model B: test loss {:1.3f}, test accuracy {:1.3f}".format(loss, acc))
-
+modelB.eval()
 
 # rebasin network for model A
 pi_modelA = RebasinNet(modelA, input_shape=(1, 1, 28, 28))
@@ -117,8 +117,10 @@ for iteration in range(20):
 
 print("Elapsed time {:1.3f} secs".format(time() - t1))
 
+pi_modelA.update_batchnorm(modelA)
 pi_modelA.eval()
 rebased_model = deepcopy(pi_modelA())
+rebased_model.eval()
 
 lambdas = torch.linspace(0, 1, 50)
 costs_naive = torch.zeros_like(lambdas)

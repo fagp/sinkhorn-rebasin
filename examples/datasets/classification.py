@@ -71,7 +71,7 @@ class SubsetImageNetDataset(Dataset):
             x, y = self[0]
             return {
                 "x": NDArrayField(dtype=np.dtype("float32"), shape=x.shape),
-                "y": NDArrayField(dtype=np.dtype("float32"), shape=y.shape),
+                "y": IntField(),
             }
         return {}
 
@@ -79,7 +79,7 @@ class SubsetImageNetDataset(Dataset):
         if FCCV_AVAILABLE:
             return {
                 "x": [NDArrayDecoder(), ToTensor()],
-                "y": [NDArrayDecoder(), ToTensor()],
+                "y": [IntDecoder(), ToTensor(), Squeeze()],
             }
         return {}
 
