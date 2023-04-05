@@ -4,11 +4,17 @@ Implementation of paper [Re-basin via implicit Sinkhorn differentiation](https:/
 
 ## Installation
 
-``pip install -e .``
+    pip install sinkhorn-rebasin
 
-## Running the examples
+## Running the examples 
 
-### Models aligment
+|                          |                                                                                                                                                                                |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Basics                   | [![Basics](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1a4NTjSUjIaai9oNtHtp1tZFvJjsGshpq?usp=sharing)                   |
+| Models alignment         | [![Models alignment](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1lDbYbbgyR4a9gJ8Lgoiz0DFB8OBouIDa?usp=sharing)         |
+| Linear mode connectivity | [![Linear mode connectivity](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/10tTRMuCGcmUGTKrnyFeyDyRXWGyy9PCu?usp=sharing) |
+
+### Models alignment
 
 
 
@@ -22,7 +28,6 @@ Implementation of paper [Re-basin via implicit Sinkhorn differentiation](https:/
 | ResNet18 | ![Alignment modelA ResNet](./resources/alignment_resnet_modelA.png) | ![Alignment pi_modelA ResNet](./resources/alignment_resnet_pimodelA.png) | ![Alignment modelB ResNet](./resources/alignment_resnet_modelB.png) |
 
 ### Linear mode connectivity
-
 
 
     cd examples
