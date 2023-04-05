@@ -1,4 +1,4 @@
-# Differentiable re-basin
+# Re-basin via implicit Sinkhorn differentiation
 
 Implementation of paper [Re-basin via implicit Sinkhorn differentiation](https://arxiv.org/abs/2212.12042) (Accepted at CVPR 2023).
 
