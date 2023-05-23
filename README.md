@@ -23,9 +23,10 @@ Implementation of paper [Re-basin via implicit Sinkhorn differentiation](https:/
 
 | Example  | Layer from $\theta_A$                                               | Layer from $\pi_{\mathcal{P}}(\theta_A)$                                 | Layer from $\theta_B$                                               |
 | -------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------- |
-| MLP      | ![Alignment modelA MLP](./resources/alignment_mlp_modelA.png)       | ![Alignment pi_modelA MLP](./resources/alignment_mlp_pimodelA.png)       | ![Alignment modelB MLP](./resources/alignment_mlp_modelB.png)       |
-| VGG      | ![Alignment modelA VGG](./resources/alignment_cnn_modelA.png)       | ![Alignment pi_modelA VGG](./resources/alignment_cnn_pimodelA.png)       | ![Alignment modelB VGG](./resources/alignment_cnn_modelB.png)       |
-| ResNet18 | ![Alignment modelA ResNet](./resources/alignment_resnet_modelA.png) | ![Alignment pi_modelA ResNet](./resources/alignment_resnet_pimodelA.png) | ![Alignment modelB ResNet](./resources/alignment_resnet_modelB.png) |
+| MLP      | ![Alignment modelA MLP](./resources/alignment_mlp_modelA.png)       | ![Alignment pi_modelA MLP](./resources/alignment_mlp_pimodelA.gif)       | ![Alignment modelB MLP](./resources/alignment_mlp_modelB.png)       |
+| VGG      | ![Alignment modelA VGG](./resources/alignment_cnn_modelA.png)       | ![Alignment pi_modelA VGG](./resources/alignment_cnn_pimodelA.gif)       | ![Alignment modelB VGG](./resources/alignment_cnn_modelB.png)       |
+| ResNet18 | ![Alignment modelA ResNet](./resources/alignment_resnet_modelA.png) | ![Alignment pi_modelA ResNet](./resources/alignment_resnet_pimodelA.gif) | ![Alignment modelB ResNet](./resources/alignment_resnet_modelB.png) |
+
 
 ### Linear mode connectivity
 
@@ -35,6 +36,6 @@ Implementation of paper [Re-basin via implicit Sinkhorn differentiation](https:/
 
 | Dataset        | Model    | Accuracy LMC                                                | Cross Entropy Loss LMC                              |
 | -------------- | -------- | ----------------------------------------------------------- | --------------------------------------------------- |
-| Mnist          | MLP      | ![LMC MLP Accuracy](./resources/lmc_mlp_accuracy.png)       | ![LMC MLP Loss](./resources/lmc_mlp_loss.png)       |
-| Mnist          | VGG      | ![LMC VGG Accuracy](./resources/lmc_cnn_accuracy.png)       | ![LMC VGG Loss](./resources/lmc_cnn_loss.png)       |
-| Imagenette-320 | ResNet18 | ![LMC ResNet Accuracy](./resources/lmc_resnet_accuracy.png) | ![LMC ResNet Loss](./resources/lmc_resnet_loss.png) |
+| Mnist          | MLP      | ![LMC MLP Accuracy](./resources/lmc_mlp_accuracy.gif)       | ![LMC MLP Loss](./resources/lmc_mlp_loss.gif)       |
+| Mnist          | VGG      | ![LMC VGG Accuracy](./resources/lmc_cnn_accuracy.gif)       | ![LMC VGG Loss](./resources/lmc_cnn_loss.gif)       |
+| Imagenette-320 | ResNet18 | ![LMC ResNet Accuracy](./resources/lmc_resnet_accuracy.gif) | ![LMC ResNet Loss](./resources/lmc_resnet_loss.gif) |
