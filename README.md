@@ -1,6 +1,6 @@
 # Re-basin via implicit Sinkhorn differentiation
 
-Implementation of paper [Re-basin via implicit Sinkhorn differentiation](https://arxiv.org/abs/2212.12042) (Accepted at CVPR 2023).
+Implementation of paper [Re-basin via implicit Sinkhorn differentiation](https://openaccess.thecvf.com/content/CVPR2023/papers/Pena_Re-Basin_via_Implicit_Sinkhorn_Differentiation_CVPR_2023_paper.pdf) (Accepted at CVPR 2023).
 
 ## Installation
 
