@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="rebasin",
-    version="0.0.1a",
+    version="0.0.2",
     author="Fidel Guerrero Pena",
     author_email="fidel-alejandro.guerrero-pena@etsmtl.ca",
     description="Python package for differentiable re-basin",

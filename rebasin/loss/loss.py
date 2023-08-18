@@ -2,6 +2,45 @@ import torch
 import torch.nn as nn
 
 
+class DistCosineLoss(nn.Module):
+    """
+    Suitable for neurons aligment
+    """
+
+    def __init__(self, modela=None):
+        super(DistCosineLoss, self).__init__()
+        self.modela = modela
+        self.eps = torch.tensor(1e-8)
+        for p in self.modela.parameters():
+            p.requires_grad = False
+
+    def set_model(self, modela):
+        self.modela = modela
+        for p in self.modela.parameters():
+            p.requires_grad = False
+
+    def forward(self, modelb):
+        loss = 0
+        num_params = 0
+        for p1, p2 in zip(self.modela.parameters(), modelb.parameters()):
+            num_params += p1.numel()
+            loss += (
+                2
+                - (
+                    (p1 * p2).sum()
+                    / torch.max(
+                        torch.linalg.vector_norm(p1) * torch.linalg.vector_norm(p2),
+                        self.eps,
+                    )
+                )
+                + 1
+            )
+
+        loss /= num_params
+
+        return loss
+
+
 class DistL2Loss(nn.Module):
     """
     Suitable for neurons aligment
