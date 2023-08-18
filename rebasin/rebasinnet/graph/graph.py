@@ -155,6 +155,10 @@ class graph:
             # edge
             else:
                 from_node, to_node = n.split(" -> ")
+                if " [style=" in to_node:
+                    to_node, _ = to_node.split(" [style=")
+                if " [style=" in from_node:
+                    from_node, _ = from_node.split(" [style=")
                 self.add_edge(from_node, to_node)
 
 
