@@ -21,11 +21,11 @@ Implementation of paper [Re-basin via implicit Sinkhorn differentiation](https:/
     cd examples
     python main_alignment_{mlp|cnn|resnet}.py
 
-| Example  | Layer from $\theta_A$                                               | Layer from $\pi_{\mathcal{P}}(\theta_A)$                                 | Layer from $\theta_B$                                               |
-| -------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------- |
-| MLP      | ![Alignment modelA MLP](./resources/alignment_mlp_modelA.png)       | ![Alignment pi_modelA MLP](./resources/alignment_mlp_pimodelA.gif)       | ![Alignment modelB MLP](./resources/alignment_mlp_modelB.png)       |
-| VGG      | ![Alignment modelA VGG](./resources/alignment_cnn_modelA.png)       | ![Alignment pi_modelA VGG](./resources/alignment_cnn_pimodelA.gif)       | ![Alignment modelB VGG](./resources/alignment_cnn_modelB.png)       |
-| ResNet18 | ![Alignment modelA ResNet](./resources/alignment_resnet_modelA.png) | ![Alignment pi_modelA ResNet](./resources/alignment_resnet_pimodelA.gif) | ![Alignment modelB ResNet](./resources/alignment_resnet_modelB.png) |
+| Example  | Layer from $\theta_A$                                                                                                         | Layer from $\pi_{\mathcal{P}}(\theta_A)$                                                                                           | Layer from $\theta_B$                                                                                                         |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| MLP      | ![Alignment modelA MLP](https://github.com/fagp/sinkhorn-rebasin/blob/main/resources/alignment_mlp_modelA.png?raw=true)       | ![Alignment pi_modelA MLP](https://github.com/fagp/sinkhorn-rebasin/blob/main/resources/alignment_mlp_pimodelA.gif?raw=true)       | ![Alignment modelB MLP](https://github.com/fagp/sinkhorn-rebasin/blob/main/resources/alignment_mlp_modelB.png?raw=true)       |
+| VGG      | ![Alignment modelA VGG](https://github.com/fagp/sinkhorn-rebasin/blob/main/resources/alignment_cnn_modelA.png?raw=true)       | ![Alignment pi_modelA VGG](https://github.com/fagp/sinkhorn-rebasin/blob/main/resources/alignment_cnn_pimodelA.gif?raw=true)       | ![Alignment modelB VGG](https://github.com/fagp/sinkhorn-rebasin/blob/main/resources/alignment_cnn_modelB.png?raw=true)       |
+| ResNet18 | ![Alignment modelA ResNet](https://github.com/fagp/sinkhorn-rebasin/blob/main/resources/alignment_resnet_modelA.png?raw=true) | ![Alignment pi_modelA ResNet](https://github.com/fagp/sinkhorn-rebasin/blob/main/resources/alignment_resnet_pimodelA.gif?raw=true) | ![Alignment modelB ResNet](https://github.com/fagp/sinkhorn-rebasin/blob/main/resources/alignment_resnet_modelB.png?raw=true) |
 
 
 ### Linear mode connectivity
