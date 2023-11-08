@@ -2,7 +2,7 @@ import torch
 from copy import deepcopy
 
 
-def lerp(model1, model2, l, temporal_model=None):
+def lerp(model1, model2, l, temporal_model=None, loader=None, device=None):
     if temporal_model is None:
         temporal_model = deepcopy(model1)
     for p, p1, p2 in zip(
@@ -10,11 +10,17 @@ def lerp(model1, model2, l, temporal_model=None):
     ):
         p.data.copy_((1 - l) * p1.data + l * p2.data)
 
-    for m, m1, m2 in zip(temporal_model.modules(), model1.modules(), model2.modules()):
-        if isinstance(m, torch.nn.BatchNorm2d):
-            m.running_mean = None
-            m.running_var = None
-            m.track_running_stats = False
+    ## Original Sinkhorn Rebasin implementation
+    if loader is None:
+        for m, m1, m2 in zip(temporal_model.modules(), model1.modules(), model2.modules()):
+            if isinstance(m, torch.nn.BatchNorm2d):
+                m.running_mean = None
+                m.running_var = None
+                m.track_running_stats = False
+                
+    ## Update like weight average methods to repair bn stats
+    else:
+        torch.optim.swa_utils.update_bn(loader, temporal_model, device=device)
 
     return temporal_model
 

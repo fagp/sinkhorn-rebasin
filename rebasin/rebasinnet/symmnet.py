@@ -73,7 +73,7 @@ class ReparamNet(torch.nn.Module):
                         ).view(p2.shape)
                     )
 
-    def update_batchnorm(self, model):
+    def update_batchnorm(self, model, loader=None, device=None):
         for m1, m2 in zip(self.model.modules(), model.modules()):
             if "BatchNorm" in str(type(m2)):
                 if m2.running_mean is None:
@@ -85,6 +85,9 @@ class ReparamNet(torch.nn.Module):
                     m1.track_running_stats = False
                 else:
                     m1.running_var.copy_(m2.running_var)
+
+        if loader is not None and device is not None:
+            torch.optim.swa_utils.update_bn(loader, self.model, device=device)
 
     def permute_batchnorm(self, P):
         for (name, m1), m2 in zip(self.output.named_modules(), self.model.modules()):
